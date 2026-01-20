@@ -1,86 +1,59 @@
 import json
-import os
-import time
+import logging
 from datetime import datetime
-from typing import Dict
+from pathlib import Path
 
-
-KNOTS_TO_MPS = 0.514444
+from rmc.models import RMCData
+from rmc.utils import validate_checksum, dmm_to_decimal, knots_to_mps
 
 
 class RMCDecoder:
     def __init__(self, sentence: str) -> None:
-        self.sentence = sentence.strip()
+        self.sentence = sentence
 
-    @staticmethod
-    def validate_checksum(sentence: str) -> None:
-        if "*" not in sentence:
-            raise ValueError("No checksum found")
-
-        data, checksum = sentence.split("*")
-        data = data.lstrip("$")
-
-        calculated = 0
-        for char in data:
-            calculated ^= ord(char)
-
-        if f"{calculated:02X}" != checksum.upper():
+    def decode(self) -> RMCData:
+        if not validate_checksum(self.sentence):
             raise ValueError("Invalid NMEA checksum")
-
-    @staticmethod
-    def _dmm_to_decimal(value: str, direction: str) -> float:
-        degrees = int(float(value) // 100)
-        minutes = float(value) - (degrees * 100)
-        decimal = degrees + minutes / 60
-
-        if direction in ("S", "W"):
-            decimal *= -1
-
-        return decimal
-
-    def decode(self) -> Dict[str, float]:
-        self.validate_checksum(self.sentence)
 
         body = self.sentence.split("*")[0]
         fields = body.split(",")
 
-        if fields[2] != "A":
-            raise ValueError("RMC data not valid")
+        if len(fields) < 9:
+            raise ValueError("Incomplete RMC sentence")
 
-        lat = self._dmm_to_decimal(fields[3], fields[4])
-        lon = self._dmm_to_decimal(fields[5], fields[6])
+        status = fields[2]
+        if status != "A":
+            raise ValueError("RMC message is void (status != 'A')")
 
-        sog = float(fields[7]) * KNOTS_TO_MPS
+        lat = dmm_to_decimal(fields[3], fields[4])
+        lon = dmm_to_decimal(fields[5], fields[6])
+        sog = knots_to_mps(float(fields[7]))
         cog = int(float(fields[8]))
 
-        return {
-            "LAT": lat,
-            "LON": lon,
-            "SOG": round(sog, 3),
-            "COG": cog,
-        }
+        return RMCData(lat=lat, lon=lon, sog=sog, cog=cog)
 
     @staticmethod
-    def save_output(data: Dict[str, float]) -> None:
+    def to_json(data: RMCData) -> str:
+        return json.dumps(
+            {
+                "LAT": data.lat,
+                "LON": data.lon,
+                "SOG": data.sog,
+                "COG": data.cog,
+            },
+            indent=4,
+        )
+
+    @staticmethod
+    def save(json_str: str) -> Path:
         today = datetime.utcnow().strftime("%Y-%m-%d")
-        os.makedirs(today, exist_ok=True)
+        timestamp = int(datetime.utcnow().timestamp())
 
-        timestamp = int(time.time())
-        filename = f"{today}/rmc_{timestamp}.json"
+        directory = Path(today)
+        directory.mkdir(exist_ok=True)
 
-        with open(filename, "w", encoding="utf-8") as file:
-            json.dump(data, file, indent=4)
+        path = directory / f"rmc_{timestamp}.json"
+        path.write_text(json_str)
 
-        print(json.dumps(data, indent=4))
-
-
-if __name__ == "__main__":
-    rmc_sentence = (
-        "$GPRMC,112000.000,A,5021.5874,N,00408.9009,"
-        "W,9.09,309.61,201022,,,A*74"
-    )
-
-    decoder = RMCDecoder(rmc_sentence)
-    decoded = decoder.decode()
-    decoder.save_output(decoded)
-
+        logging.info("Saved RMC JSON to %s", path)
+        return path
