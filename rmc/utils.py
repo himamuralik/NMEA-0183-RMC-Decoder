@@ -1,4 +1,4 @@
-python
+
 from typing import Final
 
 KNOTS_TO_MPS: Final = 0.514444
