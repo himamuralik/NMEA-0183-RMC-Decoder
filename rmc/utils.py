@@ -1,59 +1,50 @@
+import operator
+from functools import reduce
 
-import math
-
-
-
-
-import logging
-from typing import Final
-
-
-logging.basicConfig(
-level=logging.INFO,
-format="%(asctime)s [%(levelname)s] %(message)s",
-)
-
-
-KNOTS_TO_MPS: Final = 0.514444
-
-
-
+KNOTS_TO_MPS = 0.514444
 
 def validate_checksum(sentence: str) -> bool:
-if '*' not in sentence:
-return False
+    """
+    Validates NMEA 0183 checksum (XOR of characters between $ and *).
+    """
+    if not sentence.startswith('$') or '*' not in sentence:
+        return False
 
-
-data, checksum = sentence.strip().split('*')
-data = data[1:] # remove $
-
-
-calc = 0
-for char in data:
-calc ^= ord(char)
-
-
-return f"{calc:02X}" == checksum.upper()
-
-
-
-
-def knots_to_mps(knots: float) -> float:
-return round(knots * KNOTS_TO_MPS, 3)
-
-
-
+    try:
+        content, checksum_hex = sentence[1:].strip().split('*')
+        if not checksum_hex:
+            return False
+            
+        calculated = reduce(operator.xor, (ord(c) for c in content), 0)
+        return calculated == int(checksum_hex, 16)
+    except ValueError:
+        return False
 
 def dmm_to_decimal(value: str, direction: str) -> float:
-degrees = int(value[:2]) if direction in ['N', 'S'] else int(value[:3])
-minutes = float(value[len(str(degrees)):])
+    """
+    Converts NMEA DMM (Degrees + Minutes) to Decimal Degrees.
+    """
+    if not value or not direction:
+        return 0.0
 
+    # NMEA spec: Latitude is 2 digits degrees, Longitude is 3 digits
+    cut_index = 2 if direction in ['N', 'S'] else 3
 
-decimal = degrees + minutes / 60
+    try:
+        degrees = int(value[:cut_index])
+        minutes = float(value[cut_index:])
+        
+        decimal = degrees + (minutes / 60)
+        
+        if direction in ['S', 'W']:
+            decimal *= -1
+            
+        return round(decimal, 6)
+    except (ValueError, IndexError):
+        return 0.0
 
-
-if direction in ['S', 'W']:
-decimal *= -1
-
-
-return round(decimal, 6)
+def knots_to_mps(knots: float) -> float:
+    """
+    Converts speed from Knots to Meters per Second.
+    """
+    return round(knots * KNOTS_TO_MPS, 2)
