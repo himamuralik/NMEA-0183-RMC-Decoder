@@ -39,4 +39,3 @@ def dmm_to_decimal(value: str, direction: str) -> float:
         decimal *= -1
 
     return round(decimal, 6)
-2)
