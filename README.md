@@ -11,6 +11,7 @@ A Python utility to parse NMEA 0183 `$GPRMC` messages into formatted JSON.
 ## Installation
 ```bash
 pip install -r requirements.txt
+```
 Usage
 Run the main script:
 
@@ -21,4 +22,4 @@ Run the unit tests:
 
 Bash
 pytest
-```
+
