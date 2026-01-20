@@ -4,8 +4,9 @@
 
 ## Overview
 
-This project implements a decoder for **NMEA 0183 RMC (Recommended Minimum Specific GNSS Data)** messages.
-It validates the NMEA checksum, parses the RMC sentence, converts required units, and outputs the decoded data as a formatted JSON string.
+This project implements a decoder for **NMEA 0183 RMC (Recommended Minimum Specific GNSS Data)** messages using a **modular, object-oriented architecture**.
+
+The decoder validates the NMEA checksum, parses the RMC sentence, converts required units, and outputs the decoded data as a formatted JSON string.
 
 The solution follows **OOP principles**, complies with **PEP8**, and includes **unit tests**.
 
@@ -14,7 +15,7 @@ The solution follows **OOP principles**, complies with **PEP8**, and includes **
 ## Features
 
 * Validates NMEA 0183 checksum
-* Decodes RMC messages
+* Decodes RMC messages using a modular design
 * Converts:
 
   * Latitude & Longitude to decimal degrees
@@ -92,7 +93,7 @@ This implementation correctly converts **DMM → decimal degrees**, which is the
 ### Run the decoder
 
 ```bash
-python rmc_decoder.py
+python main.py
 ```
 
 ### Run tests
@@ -107,7 +108,12 @@ pytest
 
 ```
 .
-├── rmc_decoder.py
+├── main.py
+├── rmc/
+│   ├── __init__.py
+│   ├── decoder.py
+│   ├── models.py
+│   └── utils.py
 ├── tests/
 │   └── test_decoder.py
 ├── README.md
@@ -135,7 +141,6 @@ pytest
 
 Hima Murali Kattur
 
----
 
 
 
