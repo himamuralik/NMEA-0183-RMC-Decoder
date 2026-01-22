@@ -99,7 +99,8 @@ python main.py
 ### Run tests
 
 ```bash
-pytest
+python -m pytest
+
 ```
 
 ---
